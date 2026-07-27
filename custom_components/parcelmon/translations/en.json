@@ -172,5 +172,18 @@
       "returned": "Parcel was returned to sender",
       "unknown": "Parcel status is unknown"
     }
+  },
+  "selector": {
+    "parcel_status": {
+      "options": {
+        "in_transit": "In transit",
+        "out_for_delivery": "Out for delivery",
+        "delivered": "Delivered",
+        "attempted": "Delivery attempted",
+        "awaiting_collection": "Awaiting collection",
+        "returned": "Returned to sender",
+        "unknown": "Unknown"
+      }
+    }
   }
 }
