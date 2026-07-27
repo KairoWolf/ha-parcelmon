@@ -254,6 +254,9 @@ actions:
 Payload: `uid`, `carrier`, `tracking_number`, `status`, `previous_status`,
 `status_text`, `sender`, `eta`, `tracking_url`, `has_photo`.
 
+A worked example driving GeekMagic mini displays is in
+[`examples/geekmagic_parcel_notify.yaml`](examples/geekmagic_parcel_notify.yaml).
+
 It fires when a parcel is new or its status actually changes — not on every
 poll, and never during a rescan, so importing history won't set off a burst of
 notifications for parcels that arrived weeks ago.

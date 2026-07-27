@@ -1,0 +1,92 @@
+# Parcel updates on the GeekMagic mini displays.
+#
+# Modelled on the 3D-print notification automation: same geekmagic.notify
+# action, same watchOS theme, same three device_ids.
+#
+# Driven by the parcelmon_parcel_update event rather than a state trigger,
+# because parcel sensors come and go with the parcels themselves - a state
+# trigger would need an entity_id that does not exist until the parcel does.
+# The event carries everything needed in trigger.event.data.
+#
+# Before use, replace the three device_id values with your own if these
+# displays are ever re-paired.
+
+alias: Parcel update on mini displays
+description: Show parcel status changes on the GeekMagic displays
+mode: queued
+max: 10
+
+triggers:
+  - trigger: event
+    event_type: parcelmon_parcel_update
+
+conditions:
+  # Skip the noise: a parcel first appearing as "unknown" is not worth a screen.
+  - condition: template
+    value_template: >-
+      {{ trigger.event.data.status in
+         ['in_transit', 'out_for_delivery', 'delivered',
+          'attempted', 'awaiting_collection', 'returned'] }}
+
+variables:
+  # Human wording per status, with the sender when the carrier told us one.
+  headline: >-
+    {% set s = trigger.event.data.status %}
+    {% set who = trigger.event.data.sender %}
+    {% set what = who ~ ' parcel' if who else 'Parcel' %}
+    {% if s == 'delivered' %}{{ what }} delivered
+    {% elif s == 'out_for_delivery' %}{{ what }} out for delivery
+    {% elif s == 'attempted' %}{{ what }} delivery attempted
+    {% elif s == 'awaiting_collection' %}{{ what }} ready for collection
+    {% elif s == 'returned' %}{{ what }} returned to sender
+    {% else %}{{ what }} on its way
+    {% endif %}
+  status_icon: >-
+    {% set s = trigger.event.data.status %}
+    {% if s == 'delivered' %}mdi:package-variant-closed-check
+    {% elif s == 'out_for_delivery' %}mdi:truck-delivery
+    {% elif s == 'attempted' %}mdi:package-variant-remove
+    {% elif s == 'awaiting_collection' %}mdi:store-marker
+    {% elif s == 'returned' %}mdi:keyboard-return
+    {% else %}mdi:truck-fast
+    {% endif %}
+
+actions:
+  - action: geekmagic.notify
+    target:
+      entity_id: select.geekmagic_bedroom_display_display
+    data:
+      duration: 120
+      theme: watchOS
+      device_id: 8c57c46341b88bc8a07bd471e4e0c8aa
+      message: "{{ headline | trim }}"
+      icon: "{{ status_icon | trim }}"
+
+  # Second screen: the courier's proof-of-delivery photo, when there is one.
+  # Team Global Express embed it; Australia Post never do, so this is skipped
+  # for AusPost parcels rather than showing a broken image.
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.has_photo }}"
+        sequence:
+          - action: geekmagic.notify
+            target:
+              entity_id: select.geekmagic_bedroom_display_display
+            data:
+              duration: 120
+              theme: watchOS
+              device_id: 327d8a234c6b6a4128cc287f17bd5c03
+              image: "image.parcel_{{ trigger.event.data.uid }}_delivery_photo"
+
+  # Third screen: how many parcels are still on their way.
+  - action: geekmagic.notify
+    target:
+      entity_id: select.geekmagic_bedroom_display_display
+    data:
+      duration: 120
+      theme: watchOS
+      device_id: 777fc6cfb0ddc55267583707d906fc43
+      message: >-
+        {{ states('sensor.parcelmon_parcels_in_transit') }} parcels in transit
+      icon: mdi:package-variant-closed
