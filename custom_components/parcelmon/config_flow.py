@@ -29,12 +29,14 @@ from .const import (
     CONF_FOLDER,
     CONF_MARK_SEEN,
     CONF_POLL_INTERVAL,
+    CONF_PUSH,
     CONF_RETIRE_DAYS,
     DEFAULT_FOLDER,
     DEFAULT_HOST,
     DEFAULT_MARK_SEEN,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_PORT,
+    DEFAULT_PUSH,
     DEFAULT_RETIRE_DAYS,
     DOMAIN,
     MAX_POLL_INTERVAL,
@@ -209,6 +211,10 @@ class ParcelmonOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_MARK_SEEN,
                     default=options.get(CONF_MARK_SEEN, DEFAULT_MARK_SEEN),
+                ): BooleanSelector(),
+                vol.Required(
+                    CONF_PUSH,
+                    default=options.get(CONF_PUSH, DEFAULT_PUSH),
                 ): BooleanSelector(),
             }
         )

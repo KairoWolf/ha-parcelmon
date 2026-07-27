@@ -1,17 +1,27 @@
 {
   "entity": {
     "sensor": {
-      "parcel_status": { "default": "mdi:package-variant" },
-      "parcels_active": { "default": "mdi:package-variant-closed" }
+      "parcel_status": {
+        "default": "mdi:package-variant"
+      },
+      "parcels_active": {
+        "default": "mdi:package-variant-closed"
+      }
     },
     "image": {
-      "delivery_photo": { "default": "mdi:camera" }
+      "delivery_photo": {
+        "default": "mdi:camera"
+      }
     },
     "button": {
-      "rescan": { "default": "mdi:email-sync-outline" }
+      "rescan": {
+        "default": "mdi:email-sync-outline"
+      }
     }
   },
   "services": {
-    "rescan": "mdi:email-sync-outline"
+    "rescan": "mdi:email-sync-outline",
+    "add_parcel": "mdi:package-variant-plus",
+    "remove_parcel": "mdi:package-variant-minus"
   }
 }

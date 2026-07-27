@@ -95,18 +95,18 @@ class ParcelmonStore:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}", private=True, atomic_writes=True
         )
 
-    async def async_load(self) -> tuple[dict[str, Parcel], list[str]]:
-        """Return the stored parcels and handled Message-IDs."""
+    async def async_load(self) -> tuple[dict[str, Parcel], list[str], set[str]]:
+        """Return the stored parcels, handled Message-IDs and manual uids."""
         try:
             data = await self._store.async_load()
         except (HomeAssistantError, ValueError, TypeError) as err:
             # A corrupt store must not block setup: an empty start recovers on
             # the next poll, an aborted setup would need manual intervention.
             _LOGGER.warning("Could not read stored parcels, starting empty: %s", err)
-            return {}, []
+            return {}, [], set()
 
         if not data:
-            return {}, []
+            return {}, [], set()
 
         parcels: dict[str, Parcel] = {}
         for record in data.get("parcels", []):
@@ -115,17 +115,22 @@ class ParcelmonStore:
                 parcels[parcel.uid] = parcel
 
         seen = [str(mid) for mid in data.get("seen_message_ids", []) if mid]
+        manual = {str(uid) for uid in data.get("manual", []) if uid}
         _LOGGER.debug("Restored %s parcels from storage", len(parcels))
-        return parcels, seen
+        return parcels, seen, manual
 
     @callback
     def async_schedule_save(
-        self, parcels: dict[str, Parcel], seen_message_ids: list[str]
+        self,
+        parcels: dict[str, Parcel],
+        seen_message_ids: list[str],
+        manual: set[str] | None = None,
     ) -> None:
         """Queue a debounced write of the current state."""
         snapshot = {
             "parcels": [parcel_to_dict(p) for p in parcels.values()],
             "seen_message_ids": list(seen_message_ids),
+            "manual": sorted(manual or ()),
         }
         self._store.async_delay_save(lambda: snapshot, SAVE_DELAY)
 

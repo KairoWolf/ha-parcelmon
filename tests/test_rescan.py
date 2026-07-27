@@ -41,7 +41,7 @@ class FakeStore:
     def __init__(self) -> None:
         self.saves = 0
 
-    def async_schedule_save(self, parcels, seen_message_ids) -> None:
+    def async_schedule_save(self, parcels, seen_message_ids, manual=None) -> None:
         self.saves += 1
 
 
@@ -52,6 +52,7 @@ def coordinator(monkeypatch) -> ParcelmonCoordinator:
     obj._parcels = {}
     obj._seen_message_ids = []
     obj.removed = set()
+    obj.manual = set()
     obj.retire_days = 0  # off, so fixtures dated in the past survive the sweep
     obj.hass = FakeHass()
     obj.store = FakeStore()

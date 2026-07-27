@@ -20,19 +20,26 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    ATTR_CARRIER,
     ATTR_CONFIG_ENTRY_ID,
     ATTR_DAYS,
+    ATTR_ETA,
     ATTR_LIMIT,
+    ATTR_SENDER,
+    ATTR_STATUS,
+    ATTR_TRACKING,
     CARRIER_LABELS,
     DEFAULT_RESCAN_DAYS,
     DEFAULT_RESCAN_LIMIT,
     DOMAIN,
     MAX_RESCAN_DAYS,
     MAX_RESCAN_LIMIT,
+    SERVICE_ADD_PARCEL,
+    SERVICE_REMOVE_PARCEL,
     SERVICE_RESCAN,
 )
 from .coordinator import ParcelmonCoordinator
-from .models import Parcel
+from .models import STATUSES, UNKNOWN, Parcel
 from .store import ParcelmonStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +58,24 @@ RESCAN_SCHEMA = vol.Schema(
     }
 )
 
+ADD_PARCEL_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_TRACKING): vol.All(cv.string, vol.Length(min=3, max=64)),
+        vol.Optional(ATTR_CARRIER, default="auspost"): vol.In(list(CARRIER_LABELS)),
+        vol.Optional(ATTR_STATUS, default=UNKNOWN): vol.In(list(STATUSES)),
+        vol.Optional(ATTR_SENDER): cv.string,
+        vol.Optional(ATTR_ETA): cv.string,
+        vol.Optional(ATTR_CONFIG_ENTRY_ID): cv.string,
+    }
+)
+
+REMOVE_PARCEL_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_TRACKING): cv.string,
+        vol.Optional(ATTR_CONFIG_ENTRY_ID): cv.string,
+    }
+)
+
 type ParcelmonConfigEntry = ConfigEntry[ParcelmonCoordinator]
 
 
@@ -66,6 +91,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ParcelmonConfigEntry) ->
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     _async_register_services(hass)
+
+    # Push last: the folder is only watched once the platforms can react to it.
+    coordinator.async_start_push()
+    entry.async_on_unload(coordinator.async_stop_push)
     return True
 
 
@@ -73,7 +102,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ParcelmonConfigEntry) -
     """Unload a config entry."""
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded and not _loaded_entries(hass, exclude=entry.entry_id):
-        hass.services.async_remove(DOMAIN, SERVICE_RESCAN)
+        for service in (SERVICE_RESCAN, SERVICE_ADD_PARCEL, SERVICE_REMOVE_PARCEL):
+            hass.services.async_remove(DOMAIN, service)
     return unloaded
 
 
@@ -88,6 +118,35 @@ def _loaded_entries(
     ]
 
 
+def _resolve_entries(
+    hass: HomeAssistant, call: ServiceCall
+) -> list[ParcelmonConfigEntry]:
+    """Which mailboxes a service call applies to, or a user-facing error."""
+    entry_id = call.data.get(ATTR_CONFIG_ENTRY_ID)
+    if entry_id is not None:
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if entry is None or entry.domain != DOMAIN:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="entry_not_found",
+                translation_placeholders={"target": entry_id},
+            )
+        if entry.state is not ConfigEntryState.LOADED:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="entry_not_loaded",
+                translation_placeholders={"target": entry.title},
+            )
+        return [entry]
+
+    entries = _loaded_entries(hass)
+    if not entries:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN, translation_key="no_entries"
+        )
+    return entries
+
+
 @callback
 def _async_register_services(hass: HomeAssistant) -> None:
     """Register the rescan action once, however many mailboxes are configured."""
@@ -96,31 +155,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     async def _async_rescan(call: ServiceCall) -> ServiceResponse:
         """Sweep the folder for parcels in mail that was already read."""
-        entry_id = call.data.get(ATTR_CONFIG_ENTRY_ID)
-        if entry_id is not None:
-            entry = hass.config_entries.async_get_entry(entry_id)
-            if entry is None or entry.domain != DOMAIN:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="entry_not_found",
-                    translation_placeholders={"target": entry_id},
-                )
-            if entry.state is not ConfigEntryState.LOADED:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="entry_not_loaded",
-                    translation_placeholders={"target": entry.title},
-                )
-            entries = [entry]
-        else:
-            entries = _loaded_entries(hass)
-            if not entries:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN, translation_key="no_entries"
-                )
-
         totals = {"scanned": 0, "matched": 0, "new_parcels": 0, "tracked": 0}
-        for entry in entries:
+        for entry in _resolve_entries(hass, call):
             result = await entry.runtime_data.async_rescan(
                 days=call.data[ATTR_DAYS], limit=call.data[ATTR_LIMIT]
             )
@@ -128,11 +164,52 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 totals[key] += value
         return totals
 
+    async def _async_add_parcel(call: ServiceCall) -> ServiceResponse:
+        """Track a parcel by hand when its email never arrives or won't parse."""
+        entries = _resolve_entries(hass, call)
+        uid = await entries[0].runtime_data.async_add_manual_parcel(
+            tracking=call.data[ATTR_TRACKING],
+            carrier=call.data[ATTR_CARRIER],
+            status=call.data[ATTR_STATUS],
+            sender=call.data.get(ATTR_SENDER),
+            eta=call.data.get(ATTR_ETA),
+        )
+        return {"uid": uid}
+
+    async def _async_remove_parcel(call: ServiceCall) -> ServiceResponse:
+        """Stop tracking a parcel, by tracking number or uid."""
+        removed: list[str] = []
+        for entry in _resolve_entries(hass, call):
+            uid = await entry.runtime_data.async_remove_parcel(call.data[ATTR_TRACKING])
+            if uid is not None:
+                removed.append(uid)
+        if not removed:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="parcel_not_found",
+                translation_placeholders={"target": call.data[ATTR_TRACKING]},
+            )
+        return {"removed": removed}
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_RESCAN,
         _async_rescan,
         schema=RESCAN_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ADD_PARCEL,
+        _async_add_parcel,
+        schema=ADD_PARCEL_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REMOVE_PARCEL,
+        _async_remove_parcel,
+        schema=REMOVE_PARCEL_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
 

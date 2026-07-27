@@ -42,11 +42,14 @@
         "data": {
           "poll_interval": "Check for new mail every",
           "retire_days": "Remove delivered parcels after",
-          "mark_seen": "Mark emails as read once processed"
+          "mark_seen": "Mark emails as read once processed",
+          "push": "Update as soon as email arrives"
         },
         "data_description": {
           "retire_days": "Set to 0 to keep delivered parcels indefinitely.",
-          "mark_seen": "Turn off to leave mail unread. Parcels are still de-duplicated by Message-ID."
+          "mark_seen": "Turn off to leave mail unread. Parcels are still de-duplicated by Message-ID.",
+          "poll_interval": "How often to check the mailbox. Minimum 10 minutes. Ignored while 'Update as soon as email arrives' is on, which falls back to an hourly safety check.",
+          "push": "Keeps a connection open to the mail server (IMAP IDLE) so carrier email is picked up within seconds instead of on the timer. Falls back to timed checking if your server does not support it."
         }
       }
     }
@@ -98,6 +101,50 @@
           "description": "Stop after this many of the most recent messages. Keeps a large folder from taking a long time."
         }
       }
+    },
+    "add_parcel": {
+      "name": "Add parcel",
+      "description": "Track a parcel by hand. Use this when the carrier email never arrives, or arrives in a format Parcelmon cannot read. If a real email for the same tracking number turns up later it takes over, so you will not end up with a duplicate.",
+      "fields": {
+        "tracking_number": {
+          "name": "Tracking number",
+          "description": "The consignment number printed on the carrier's notification."
+        },
+        "carrier": {
+          "name": "Carrier",
+          "description": "Which carrier is delivering it."
+        },
+        "status": {
+          "name": "Status",
+          "description": "Where the parcel is now. Leave as Unknown if you are not sure."
+        },
+        "sender": {
+          "name": "Sender",
+          "description": "Who sent it. Shown in the device name and available to notifications."
+        },
+        "eta": {
+          "name": "Expected delivery",
+          "description": "Free text, shown as-is. For example 'Thursday 30 Jul'."
+        },
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to add it to. Leave empty to use the only one."
+        }
+      }
+    },
+    "remove_parcel": {
+      "name": "Remove parcel",
+      "description": "Stop tracking a parcel and delete its entities. Accepts either the tracking number or the internal uid. A later email for the same parcel will start tracking it again.",
+      "fields": {
+        "tracking_number": {
+          "name": "Tracking number",
+          "description": "The tracking number, or the parcel's uid such as auspost_36ypj5053229."
+        },
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to remove it from. Leave empty to search all of them."
+        }
+      }
     }
   },
   "exceptions": {
@@ -109,6 +156,21 @@
     },
     "no_entries": {
       "message": "No Parcelmon mailbox is set up yet."
+    },
+    "parcel_not_found": {
+      "message": "No tracked parcel matches {target}."
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "status_changed": "Parcel status changed",
+      "in_transit": "Parcel is in transit",
+      "out_for_delivery": "Parcel is out for delivery",
+      "delivered": "Parcel was delivered",
+      "attempted": "Parcel delivery was attempted",
+      "awaiting_collection": "Parcel is awaiting collection",
+      "returned": "Parcel was returned to sender",
+      "unknown": "Parcel status is unknown"
     }
   }
 }

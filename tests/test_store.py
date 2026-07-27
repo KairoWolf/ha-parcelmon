@@ -88,15 +88,16 @@ class TestTolerance:
 class FakeStore:
     """Stands in for ParcelmonStore without touching the filesystem."""
 
-    def __init__(self, parcels=None, seen=None):
+    def __init__(self, parcels=None, seen=None, manual=None):
         self._parcels = parcels or {}
         self._seen = seen or []
+        self._manual = manual or set()
         self.saves = 0
 
     async def async_load(self):
-        return dict(self._parcels), list(self._seen)
+        return dict(self._parcels), list(self._seen), set(self._manual)
 
-    def async_schedule_save(self, parcels, seen_message_ids):
+    def async_schedule_save(self, parcels, seen_message_ids, manual=None):
         self.saves += 1
 
 
@@ -106,6 +107,7 @@ def coordinator() -> ParcelmonCoordinator:
     obj._parcels = {}
     obj._seen_message_ids = []
     obj.removed = set()
+    obj.manual = set()
     obj.retire_days = 3
     return obj
 

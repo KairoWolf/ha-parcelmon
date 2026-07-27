@@ -26,3 +26,63 @@ rescan:
           max: 2000
           step: 1
           mode: box
+
+add_parcel:
+  fields:
+    tracking_number:
+      required: true
+      example: 36YPJ5053229
+      selector:
+        text:
+    carrier:
+      required: false
+      default: auspost
+      selector:
+        select:
+          options:
+            - label: Australia Post
+              value: auspost
+            - label: Team Global Express
+              value: tge
+    status:
+      required: false
+      default: unknown
+      selector:
+        select:
+          translation_key: parcel_status
+          options:
+            - in_transit
+            - out_for_delivery
+            - delivered
+            - attempted
+            - awaiting_collection
+            - returned
+            - unknown
+    sender:
+      required: false
+      example: UCL Co. Ltd
+      selector:
+        text:
+    eta:
+      required: false
+      example: Thursday 30 Jul
+      selector:
+        text:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon
+
+remove_parcel:
+  fields:
+    tracking_number:
+      required: true
+      example: 36YPJ5053229
+      selector:
+        text:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon

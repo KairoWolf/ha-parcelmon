@@ -204,6 +204,79 @@ content: >
 
 ---
 
+## How often it checks
+
+| Setting | Default | Range |
+| --- | --- | --- |
+| Check for new mail every | 60 minutes | 10 – 1440 |
+| Update as soon as email arrives | off | — |
+
+Turn on **Update as soon as email arrives** to hold an IMAP IDLE connection open,
+so carrier mail is picked up within seconds instead of on the timer. The timed
+check drops back to an hourly safety net for the case where the connection dies
+without saying so.
+
+If your server doesn't advertise IDLE, Parcelmon logs it once and keeps using
+the timer — push is an optimisation, never a requirement.
+
+---
+
+## Notifications
+
+Every parcel device offers device triggers, so a notification is a few clicks in
+the automation editor rather than a template. Pick the parcel device, then a
+trigger like **Parcel was delivered** or **Parcel status changed**.
+
+Underneath, they filter the `parcelmon_parcel_update` event, which you can also
+use directly:
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: parcelmon_parcel_update
+    event_data:
+      status: delivered
+actions:
+  - action: notify.mobile_app
+    data:
+      message: "{{ trigger.event.data.sender }} parcel delivered"
+```
+
+Payload: `uid`, `carrier`, `tracking_number`, `status`, `previous_status`,
+`status_text`, `sender`, `eta`, `tracking_url`, `has_photo`.
+
+It fires when a parcel is new or its status actually changes — not on every
+poll, and never during a rescan, so importing history won't set off a burst of
+notifications for parcels that arrived weeks ago.
+
+---
+
+## Adding a parcel by hand
+
+For a parcel whose email never arrives, or arrives in a shape the parser can't
+read:
+
+```yaml
+action: parcelmon.add_parcel
+data:
+  tracking_number: 36YPJ5053229
+  carrier: auspost
+  status: in_transit
+  sender: UCL Co. Ltd
+```
+
+If the carrier's email turns up later it takes over the same parcel rather than
+creating a duplicate — the uid is derived from carrier plus tracking number, and
+real mail always supersedes a hand-typed placeholder.
+
+```yaml
+action: parcelmon.remove_parcel
+data:
+  tracking_number: 36YPJ5053229    # or the uid, auspost_36ypj5053229
+```
+
+---
+
 ## Rescanning old email
 
 Routine checking only ever looks at **unread** mail, and marks it read once
