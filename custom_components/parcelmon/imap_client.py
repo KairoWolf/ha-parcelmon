@@ -13,6 +13,7 @@ import email
 import imaplib
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from email.message import Message
 
 _LOGGER = logging.getLogger(__name__)
@@ -117,6 +118,52 @@ def fetch_unseen(settings: ImapSettings) -> list[tuple[bytes, Message]]:
 
         for imap_id in (data[0] or b"").split():
             # BODY.PEEK so nothing is marked read until parsing has succeeded.
+            status, payload = conn.fetch(imap_id, "(BODY.PEEK[])")
+            if status != "OK" or not payload or not isinstance(payload[0], tuple):
+                _LOGGER.warning("Could not fetch message %s", imap_id.decode())
+                continue
+            messages.append((imap_id, email.message_from_bytes(payload[0][1])))
+    finally:
+        with contextlib.suppress(imaplib.IMAP4.error):
+            conn.close()
+        conn.logout()
+    return messages
+
+
+def fetch_history(
+    settings: ImapSettings, days: int = 0, limit: int = 0
+) -> list[tuple[bytes, Message]]:
+    """Blocking. Return (imap_id, message) for mail already in the folder.
+
+    Unlike fetch_unseen this ignores the \\Seen flag, so it picks up carrier mail
+    that was read before Parcelmon was installed. The folder is opened READ-ONLY
+    and messages come back via BODY.PEEK, so a rescan cannot change a flag,
+    cannot mark anything read, and is safe to run repeatedly.
+
+    days>0 limits the search to recent mail via IMAP SINCE; limit>0 keeps only
+    the newest N matches, since IMAP ids ascend with arrival order.
+    """
+    conn = _login(settings)
+    messages: list[tuple[bytes, Message]] = []
+    try:
+        status, _ = conn.select(_quote(settings.folder), readonly=True)
+        if status != "OK":
+            raise ParcelmonFolderError(settings.folder, _folder_names(conn))
+
+        criteria = ["ALL"]
+        if days > 0:
+            since = (datetime.now(UTC) - timedelta(days=days)).strftime("%d-%b-%Y")
+            criteria = ["SINCE", since]
+
+        status, data = conn.search(None, *criteria)
+        if status != "OK":
+            return []
+
+        imap_ids = (data[0] or b"").split()
+        if limit > 0:
+            imap_ids = imap_ids[-limit:]
+
+        for imap_id in imap_ids:
             status, payload = conn.fetch(imap_id, "(BODY.PEEK[])")
             if status != "OK" or not payload or not isinstance(payload[0], tuple):
                 _LOGGER.warning("Could not fetch message %s", imap_id.decode())

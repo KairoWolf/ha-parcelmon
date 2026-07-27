@@ -21,6 +21,19 @@ DEFAULT_MARK_SEEN: Final = True
 MIN_POLL_INTERVAL: Final = 1
 MAX_POLL_INTERVAL: Final = 120
 
+SERVICE_RESCAN: Final = "rescan"
+
+ATTR_CONFIG_ENTRY_ID: Final = "config_entry_id"
+ATTR_DAYS: Final = "days"
+ATTR_LIMIT: Final = "limit"
+
+#: Normal polling only ever sees UNSEEN mail, so parcels that were already read
+#: are invisible. A rescan reads the folder read-only to backfill them.
+DEFAULT_RESCAN_DAYS: Final = 30
+DEFAULT_RESCAN_LIMIT: Final = 200
+MAX_RESCAN_DAYS: Final = 3650
+MAX_RESCAN_LIMIT: Final = 2000
+
 STATUS_ICONS: Final[dict[str, str]] = {
     "in_transit": "mdi:truck-fast",
     "out_for_delivery": "mdi:truck-delivery",

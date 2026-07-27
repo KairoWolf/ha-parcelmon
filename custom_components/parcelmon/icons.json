@@ -6,6 +6,12 @@
     },
     "image": {
       "delivery_photo": { "default": "mdi:camera" }
+    },
+    "button": {
+      "rescan": { "default": "mdi:email-sync-outline" }
     }
+  },
+  "services": {
+    "rescan": "mdi:email-sync-outline"
   }
 }

@@ -18,6 +18,8 @@ from .const import (
     DEFAULT_FOLDER,
     DEFAULT_MARK_SEEN,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_RESCAN_DAYS,
+    DEFAULT_RESCAN_LIMIT,
     DEFAULT_RETIRE_DAYS,
     DOMAIN,
 )
@@ -26,6 +28,7 @@ from .imap_client import (
     ParcelmonAuthError,
     ParcelmonConnectionError,
     ParcelmonFolderError,
+    fetch_history,
     fetch_unseen,
     mark_seen,
 )
@@ -120,6 +123,75 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
             await self.hass.async_add_executor_job(mark_seen, self.settings, handled)
 
         return dict(self._parcels)
+
+    async def async_rescan(
+        self, days: int = DEFAULT_RESCAN_DAYS, limit: int = DEFAULT_RESCAN_LIMIT
+    ) -> dict[str, int]:
+        """Backfill parcels from mail already sitting in the folder, read or not.
+
+        Routine polling only ever looks at UNSEEN mail, so anything the user (or
+        a previous run with mark_seen on) already read is invisible to it. This
+        reads the folder read-only instead, which means it changes no flags and
+        can be run as often as you like.
+        """
+        try:
+            messages = await self.hass.async_add_executor_job(
+                fetch_history, self.settings, days, limit
+            )
+        except ParcelmonAuthError as err:
+            raise ConfigEntryAuthFailed(
+                "Mailbox rejected the credentials. Gmail App Passwords are "
+                "revoked when the account password changes."
+            ) from err
+        except ParcelmonFolderError as err:
+            raise UpdateFailed(
+                f"Folder {err.folder!r} not found. Available: "
+                f"{', '.join(err.available) or '(none)'}"
+            ) from err
+        except (ParcelmonConnectionError, OSError) as err:
+            raise UpdateFailed(f"Cannot reach {self.settings.host}: {err}") from err
+
+        before = set(self._parcels)
+        matched = 0
+
+        for _imap_id, message in messages:
+            parcel = parse_message(message)
+            if parcel is None:
+                # Quietly skipped: a rescan sweeps the whole folder, so unmatched
+                # mail here is normal and must not spam the log the way a live
+                # poll's unmatched message does.
+                continue
+
+            matched += 1
+            if parcel.message_id and parcel.message_id in self._seen_message_ids:
+                continue
+
+            # Date the parcel by its email, not by now, so retire_days measures
+            # from when the parcel actually finished rather than from the rescan.
+            if parcel.email_date is not None:
+                parcel.seen_at = parcel.email_date
+
+            existing = self._parcels.get(parcel.uid)
+            if existing is not None and existing.seen_at > parcel.seen_at:
+                # Live polling already knows something newer about this parcel.
+                continue
+
+            self._merge(parcel)
+            if parcel.message_id:
+                self._seen_message_ids.append(parcel.message_id)
+
+        self._seen_message_ids = self._seen_message_ids[-MAX_REMEMBERED_MESSAGES:]
+        self._retire_stale()
+
+        result = {
+            "scanned": len(messages),
+            "matched": matched,
+            "new_parcels": len(set(self._parcels) - before),
+            "tracked": len(self._parcels),
+        }
+        _LOGGER.debug("Rescan over %s days: %s", days or "all", result)
+        self.async_set_updated_data(dict(self._parcels))
+        return result
 
     def _merge(self, parcel: Parcel) -> None:
         """Newer mail wins, but never blank out a field an older email filled in.

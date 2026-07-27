@@ -1,0 +1,28 @@
+rescan:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon
+    days:
+      required: false
+      default: 30
+      example: 30
+      selector:
+        number:
+          min: 0
+          max: 3650
+          step: 1
+          unit_of_measurement: days
+          mode: box
+    limit:
+      required: false
+      default: 200
+      example: 200
+      selector:
+        number:
+          min: 1
+          max: 2000
+          step: 1
+          mode: box

@@ -73,6 +73,42 @@
       "delivery_photo": {
         "name": "Delivery photo"
       }
+    },
+    "button": {
+      "rescan": {
+        "name": "Rescan mailbox"
+      }
+    }
+  },
+  "services": {
+    "rescan": {
+      "name": "Rescan mailbox",
+      "description": "Looks for parcels in email that is already in the folder, including mail that has been read. Normal checking only looks at unread mail, so this is how you pick up parcels from before Parcelmon was installed. The folder is opened read-only, so nothing is marked read and it is safe to run repeatedly.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to scan. Leave empty to scan all of them."
+        },
+        "days": {
+          "name": "Look back",
+          "description": "How many days of email to examine. Set to 0 to scan the entire folder."
+        },
+        "limit": {
+          "name": "Message limit",
+          "description": "Stop after this many of the most recent messages. Keeps a large folder from taking a long time."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_found": {
+      "message": "No Parcelmon mailbox found for {target}."
+    },
+    "entry_not_loaded": {
+      "message": "The Parcelmon mailbox {target} is not loaded. Enable it and try again."
+    },
+    "no_entries": {
+      "message": "No Parcelmon mailbox is set up yet."
     }
   }
 }

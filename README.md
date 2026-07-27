@@ -22,6 +22,7 @@ Each parcel becomes its own device, added and removed automatically.
 | `sensor.parcel_tge_go2s501988_status` | `delivered` |
 | `image.parcel_tge_go2s501988_delivery_photo` | the driver's photo |
 | `sensor.parcelmon_parcels_in_transit` | `3` |
+| `button.parcelmon_rescan_mailbox` | scans mail that was already read |
 
 Status sensor attributes: `carrier`, `tracking_number`, `status`, `status_text`,
 `sender`, `eta`, `destination`, `delivered_on`, `tracking_url`, `has_photo`,
@@ -193,6 +194,45 @@ content: >
   Nothing on its way.
   {% endfor %}
 ```
+
+---
+
+## Rescanning old email
+
+Routine checking only ever looks at **unread** mail, and marks it read once
+parsed. So on a fresh install, a label already full of read carrier email looks
+empty — nothing appears until your next parcel is posted.
+
+Press **Rescan mailbox** on the Parcelmon device to backfill from mail that has
+already been read. The folder is opened read-only, so nothing is marked read and
+you can press it as often as you like.
+
+For a wider window, call the action directly:
+
+```yaml
+action: parcelmon.rescan
+data:
+  days: 90     # 0 scans the whole folder
+  limit: 500   # newest N messages
+```
+
+It returns what it found, so you can use it in a script:
+
+```yaml
+action: parcelmon.rescan
+response_variable: scan
+```
+
+```json
+{ "scanned": 412, "matched": 37, "new_parcels": 6, "tracked": 9 }
+```
+
+Two things worth knowing:
+
+- Parcels are dated by their **email**, not by the scan, so `retire_days` still
+  measures from when the parcel arrived. Scanning a year of history won't flood
+  you with long-delivered parcels — they're retired on the way in.
+- A rescan never overwrites something newer that polling already knows.
 
 ---
 
