@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -65,7 +65,7 @@ class TestMerge:
 class TestRetire:
     def _aged(self, days: int, status: str) -> Parcel:
         parcel = make(status=status)
-        parcel.seen_at = datetime.now(timezone.utc) - timedelta(days=days)
+        parcel.seen_at = datetime.now(UTC) - timedelta(days=days)
         return parcel
 
     def test_old_delivered_parcel_is_removed(self, coordinator):

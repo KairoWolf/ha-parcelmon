@@ -7,7 +7,13 @@ import pathlib
 
 import pytest
 
-from custom_components.parcelmon.models import DELIVERED, IN_TRANSIT, UNKNOWN, classify, classify_prioritised
+from custom_components.parcelmon.models import (
+    DELIVERED,
+    IN_TRANSIT,
+    UNKNOWN,
+    classify,
+    classify_prioritised,
+)
 from custom_components.parcelmon.parsers import parse_message
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
