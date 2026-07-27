@@ -34,6 +34,13 @@ Statuses are normalised across carriers: `in_transit`, `out_for_delivery`,
 Delivered parcels are removed after a configurable number of days (default 3),
 so your entity list doesn't fill up with history.
 
+Tracked parcels are saved to disk and restored on restart. This matters because
+mail is marked read once parsed: a parcel held only in memory would vanish at
+shutdown and could never be recovered, since the message no longer shows up in
+an unread search. Parcels that finished while Home Assistant was down are
+retired on the way back in rather than reappearing. Removing the mailbox deletes
+the stored file.
+
 ---
 
 ## Install

@@ -35,6 +35,16 @@ class FakeHass:
         return func(*args)
 
 
+class FakeStore:
+    """Counts saves so persistence can be asserted without touching disk."""
+
+    def __init__(self) -> None:
+        self.saves = 0
+
+    def async_schedule_save(self, parcels, seen_message_ids) -> None:
+        self.saves += 1
+
+
 @pytest.fixture
 def coordinator(monkeypatch) -> ParcelmonCoordinator:
     """A coordinator wired up far enough to run async_rescan."""
@@ -44,6 +54,7 @@ def coordinator(monkeypatch) -> ParcelmonCoordinator:
     obj.removed = set()
     obj.retire_days = 0  # off, so fixtures dated in the past survive the sweep
     obj.hass = FakeHass()
+    obj.store = FakeStore()
     obj.settings = ImapSettings(
         host="imap.example.com",
         port=993,
@@ -132,6 +143,12 @@ class TestRescan:
         assert parcel.email_date is not None
         assert parcel.seen_at == parcel.email_date
         assert parcel.seen_at < datetime.now(UTC) - timedelta(days=1)
+
+    async def test_results_are_persisted(self, coordinator, monkeypatch):
+        """Otherwise a restart would lose everything the rescan just imported."""
+        stub_history(monkeypatch, [load("auspost_in_transit.eml")])
+        await coordinator.async_rescan()
+        assert coordinator.store.saves == 1
 
     async def test_window_arguments_reach_the_fetch(self, coordinator, monkeypatch):
         calls = stub_history(monkeypatch, [])

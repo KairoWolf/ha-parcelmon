@@ -33,6 +33,7 @@ from .const import (
 )
 from .coordinator import ParcelmonCoordinator
 from .models import Parcel
+from .store import ParcelmonStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ type ParcelmonConfigEntry = ConfigEntry[ParcelmonCoordinator]
 async def async_setup_entry(hass: HomeAssistant, entry: ParcelmonConfigEntry) -> bool:
     """Set up Parcelmon from a config entry."""
     coordinator = ParcelmonCoordinator(hass, entry)
+    # Before the first poll: mail is marked read once parsed, so parcels that
+    # only lived in memory could never be recovered from the mailbox.
+    await coordinator.async_restore()
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
@@ -136,6 +140,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
 async def async_reload_entry(hass: HomeAssistant, entry: ParcelmonConfigEntry) -> None:
     """Reload when options change, so the poll interval takes effect."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ParcelmonConfigEntry) -> None:
+    """Delete stored parcels when the mailbox is removed."""
+    await ParcelmonStore(hass, entry.entry_id).async_remove()
 
 
 class ParcelmonEntity(CoordinatorEntity[ParcelmonCoordinator]):

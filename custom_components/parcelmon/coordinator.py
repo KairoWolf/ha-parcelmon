@@ -34,6 +34,7 @@ from .imap_client import (
 )
 from .models import Parcel
 from .parsers import parse_message
+from .store import ParcelmonStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +74,20 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
         self._seen_message_ids: list[str] = []
         #: uids retired this cycle, so platforms can drop their entities.
         self.removed: set[str] = set()
+        self.store = ParcelmonStore(hass, entry.entry_id)
+
+    async def async_restore(self) -> None:
+        """Load parcels saved before the last shutdown.
+
+        Must run before the first refresh. Mail is marked read once parsed, so
+        without this a restart loses every in-flight parcel permanently: the
+        message will never appear in an UNSEEN search again.
+        """
+        self._parcels, self._seen_message_ids = await self.store.async_load()
+        # Anything that finished while Home Assistant was down should not come
+        # back just because it was on disk.
+        self._retire_stale()
+        self.removed.clear()
 
     async def _async_update_data(self) -> dict[str, Parcel]:
         try:
@@ -122,6 +137,9 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
         if handled:
             await self.hass.async_add_executor_job(mark_seen, self.settings, handled)
 
+        # Save before returning: the messages behind these parcels have just
+        # been marked read and cannot be fetched a second time.
+        self.store.async_schedule_save(self._parcels, self._seen_message_ids)
         return dict(self._parcels)
 
     async def async_rescan(
@@ -190,6 +208,7 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
             "tracked": len(self._parcels),
         }
         _LOGGER.debug("Rescan over %s days: %s", days or "all", result)
+        self.store.async_schedule_save(self._parcels, self._seen_message_ids)
         self.async_set_updated_data(dict(self._parcels))
         return result
 
