@@ -1,0 +1,88 @@
+From: Team Global Express <myteamge@teamglobalexp.com>
+To: someone@example.com
+Message-ID: <0101019f8c681a50-ef1bc756-75c5-4614-9dee-f34f1e685780-000000@us-west-2.amazonaws.com>
+Subject: Your parcel from UBI Logistics has been delivered
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_552_911145223.1784767059726"
+Date: Thu, 23 Jul 2026 00:37:40 +0000
+X-SES-Outgoing: 2026.07.23-54.240.27.62
+
+------=_Part_552_911145223.1784767059726
+Content-Type: text/HTML; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DUTF-8" />
+<meta defang_name=3D"viewport" content=3D"width=3Ddevice-width, initial-sca=
+le=3D1.0" />
+<title></title>
+<table align=3D"center" cellpadding=3D"0" cellspacing=3D"0" border=3D"0" wi=
+dth=3D"600px">
+ <tbody>
+  <tr><td bgcolor=3D"#ffffff" align=3D"center">
+   <img alt=3D"Team Global Express Logo" defang_contenteditable=3D"true" he=
+ight=3D"40px" src=3D"https://s3.ap-southeast-2.amazonaws.com/td.tollge.gp/B=
+2C Mail Header.png" width=3D"136px" />
+  </td></tr>
+  <tr bgcolor=3D"#ffffff"><td align=3D"center">
+   <table><tbody><tr bgcolor=3D"#FAF8F2"><td valign=3D"middle">
+    <table><tbody>
+     <tr><td style=3D"font-family: Helvetica;color: #292929;">
+      <span style=3D"font-size: 18px;">Delivered </span>
+      <img style=3D"height: 27px;" src=3D"https://s3.ap-southeast-2.amazona=
+ws.com/td.tollge.gp/B2C Mail Delivered.png">
+     </td></tr>
+     <tr><td style=3D"font-size: 30px;"><div id=3D"subject">Your parcel fro=
+m UBI Logistics has been delivered.</div></td></tr>
+     <tr><td style=3D"padding-top:40px">
+      <a href=3D"https://teamglobalexp.com/myparcel?shipmentID&#61;GO2S5019=
+88&amp;utm_source&#61;b2c&amp;utm_medium&#61;email&amp;utm_campaign&#61;shi=
+pment&amp;status&#61;delivered">
+       <img alt=3D"Team Global Express Logo" defang_contenteditable=3D"true=
+" src=3D"https://s3.ap-southeast-2.amazonaws.com/td.tollge.gp/B2C View Deta=
+ils Button.png" />
+      </a>
+     </td></tr>
+     <tr><td align=3D"left" style=3D"font-size: 16px;">
+      <table>
+       <td style=3D"width:217px;vertical-align:top">
+        Your <b>UBI Logistics</b> parcel <b>GO2S501988 </b> has been delive=
+red on Thursday 23 July.
+        <p style=3D"width:217px">Our driver took a photo as proof of contac=
+tless delivery.</p>
+        <p style=3D"font-size: 12px;"><a href=3D"http://p.mytge.co/N1QU2M4j=
+P3">Can&apos;t view the photo?</a></p>
+       </td>
+       <td>
+        <img style=3D"margin-left:24px;" alt=3D"POD image" defang_contented=
+itable=3D"true" height=3D"212px" width=3D"159px" srcset=3D"data:image/jpeg;=
+base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcg=
+LikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS0=
+1T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCA=
+A1ACgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDA=
+wIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRol=
+JicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJW=
+Wl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09f=
+b3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAA=
+QJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2=
+Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqO=
+kpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADA=
+MBAAIRAxEAPwB1FFFYGQUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFF=
+FFAH//Z" src=3D"http://p.mytge.co/N1QU2M4jP3" />
+       </td>
+      </table>
+     </td></tr>
+    </tbody></table>
+   </td></tr></tbody></table>
+  </td></tr>
+  <tr><td align=3D"left" style=3D"color: #8D8D8D;font-size: 12px;">
+   Any delivery dates stated above are estimated and are to be used as a gu=
+ide only.
+   Please note this email was automatically generated and replies will not =
+be answered.
+   Delivery photo is only available for 7 days.
+  </td></tr>
+  <tr><td align=3D"left" style=3D"color: #8D8D8D;">Copyright &copy; Team Gl=
+obal Express Pty Ltd.</td></tr>
+ </tbody>
+</table>
+------=_Part_552_911145223.1784767059726--

@@ -1,0 +1,78 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your mailbox",
+        "description": "Parcelmon reads carrier notification emails from a single Gmail label.\n\nBefore continuing:\n1. Create a Gmail filter for `from:(auspost.com.au OR teamglobalexp.com)` that applies a label.\n2. Create an App Password at myaccount.google.com/apppasswords (requires 2-Step Verification).\n\nOnly the label below is ever opened. Your inbox is never read.",
+        "data": {
+          "username": "Email address",
+          "password": "App Password",
+          "folder": "Label",
+          "host": "IMAP server",
+          "port": "Port"
+        },
+        "data_description": {
+          "password": "16-character Google App Password, not your account password. Spaces are removed automatically.",
+          "folder": "The Gmail label your filter applies. Nested labels use Parent/Child."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-enter your App Password",
+        "description": "The mailbox rejected the stored credentials for {username}. Google revokes App Passwords when the account password changes, so a new one is needed.",
+        "data": {
+          "password": "App Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the mail server. Check the host, port, and your network.",
+      "invalid_auth": "The mail server rejected these credentials. Use a 16-character App Password, and confirm IMAP is enabled in Gmail settings.",
+      "unknown_folder": "That label was not found. Available: {folders}",
+      "unknown": "Unexpected error. Check the Home Assistant log for details."
+    },
+    "abort": {
+      "already_configured": "This mailbox and label are already set up.",
+      "reauth_successful": "Credentials updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Parcelmon options",
+        "data": {
+          "poll_interval": "Check for new mail every",
+          "retire_days": "Remove delivered parcels after",
+          "mark_seen": "Mark emails as read once processed"
+        },
+        "data_description": {
+          "retire_days": "Set to 0 to keep delivered parcels indefinitely.",
+          "mark_seen": "Turn off to leave mail unread. Parcels are still de-duplicated by Message-ID."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "parcel_status": {
+        "name": "Status",
+        "state": {
+          "in_transit": "In transit",
+          "out_for_delivery": "Out for delivery",
+          "delivered": "Delivered",
+          "attempted": "Delivery attempted",
+          "awaiting_collection": "Awaiting collection",
+          "returned": "Returned to sender",
+          "unknown": "Unknown"
+        }
+      },
+      "parcels_active": {
+        "name": "Parcels in transit"
+      }
+    },
+    "image": {
+      "delivery_photo": {
+        "name": "Delivery photo"
+      }
+    }
+  }
+}
