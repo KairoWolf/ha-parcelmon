@@ -22,7 +22,16 @@ Each parcel becomes its own device, added and removed automatically.
 | `sensor.parcel_tge_go2s501988_status` | `delivered` |
 | `image.parcel_tge_go2s501988_delivery_photo` | the driver's photo |
 | `sensor.parcelmon_parcels_in_transit` | `3` |
+| `sensor.parcelmon_delivered_today` | `2` |
+| `sensor.parcelmon_last_checked` | timestamp, diagnostic |
+| `binary_sensor.parcelmon_mailbox` | `on` while the mailbox is readable |
+| `button.parcelmon_check_for_mail_now` | reads the mailbox immediately |
 | `button.parcelmon_rescan_mailbox` | scans mail that was already read |
+
+`binary_sensor.parcelmon_mailbox` is worth putting on a dashboard. A revoked App
+Password or a renamed label leaves Parcelmon quietly reporting the parcels it
+already knew about, which looks exactly like "nothing has arrived" — this is the
+entity that tells them apart.
 
 Status sensor attributes: `carrier`, `tracking_number`, `status`, `status_text`,
 `sender`, `eta`, `destination`, `delivered_on`, `tracking_url`, `has_photo`,
@@ -248,6 +257,45 @@ Payload: `uid`, `carrier`, `tracking_number`, `status`, `previous_status`,
 It fires when a parcel is new or its status actually changes — not on every
 poll, and never during a rescan, so importing history won't set off a burst of
 notifications for parcels that arrived weeks ago.
+
+---
+
+## Actions
+
+| Action | What it does |
+| --- | --- |
+| `parcelmon.refresh` | Check for new mail now |
+| `parcelmon.rescan` | Sweep the folder, including mail already read |
+| `parcelmon.add_parcel` | Track a parcel by hand |
+| `parcelmon.remove_parcel` | Stop tracking a parcel |
+| `parcelmon.set_status` | Correct a parcel's status |
+| `parcelmon.clear_delivered` | Drop finished parcels now |
+| `parcelmon.get_parcels` | Return every parcel, changes nothing |
+
+All of them take an optional `config_entry_id` if you have more than one
+mailbox, and all return a response.
+
+`set_status` is the escape hatch for a parcel the classifier read wrongly, or
+one that turned up on the doorstep without a delivery email:
+
+```yaml
+action: parcelmon.set_status
+data:
+  tracking_number: 36YPJ5053229
+  status: delivered
+```
+
+It fires the same status-change event a real update does, so your automations
+still run.
+
+`get_parcels` is the one to build dashboards on:
+
+```yaml
+action: parcelmon.get_parcels
+response_variable: result
+```
+
+Each entry carries the full attribute set plus `uid` and `manual`.
 
 ---
 

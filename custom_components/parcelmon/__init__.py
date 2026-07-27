@@ -35,8 +35,12 @@ from .const import (
     MAX_RESCAN_DAYS,
     MAX_RESCAN_LIMIT,
     SERVICE_ADD_PARCEL,
+    SERVICE_CLEAR_DELIVERED,
+    SERVICE_GET_PARCELS,
+    SERVICE_REFRESH,
     SERVICE_REMOVE_PARCEL,
     SERVICE_RESCAN,
+    SERVICE_SET_STATUS,
 )
 from .coordinator import ParcelmonCoordinator
 from .models import STATUSES, UNKNOWN, Parcel
@@ -44,7 +48,12 @@ from .store import ParcelmonStore
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.IMAGE, Platform.BUTTON]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.IMAGE,
+    Platform.BUTTON,
+]
 
 RESCAN_SCHEMA = vol.Schema(
     {
@@ -76,6 +85,16 @@ REMOVE_PARCEL_SCHEMA = vol.Schema(
     }
 )
 
+SET_STATUS_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_TRACKING): cv.string,
+        vol.Required(ATTR_STATUS): vol.In(list(STATUSES)),
+        vol.Optional(ATTR_CONFIG_ENTRY_ID): cv.string,
+    }
+)
+
+ENTRY_ONLY_SCHEMA = vol.Schema({vol.Optional(ATTR_CONFIG_ENTRY_ID): cv.string})
+
 type ParcelmonConfigEntry = ConfigEntry[ParcelmonCoordinator]
 
 
@@ -102,7 +121,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ParcelmonConfigEntry) -
     """Unload a config entry."""
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded and not _loaded_entries(hass, exclude=entry.entry_id):
-        for service in (SERVICE_RESCAN, SERVICE_ADD_PARCEL, SERVICE_REMOVE_PARCEL):
+        for service in (
+            SERVICE_RESCAN,
+            SERVICE_ADD_PARCEL,
+            SERVICE_REMOVE_PARCEL,
+            SERVICE_SET_STATUS,
+            SERVICE_CLEAR_DELIVERED,
+            SERVICE_REFRESH,
+            SERVICE_GET_PARCELS,
+        ):
             hass.services.async_remove(DOMAIN, service)
     return unloaded
 
@@ -191,6 +218,47 @@ def _async_register_services(hass: HomeAssistant) -> None:
             )
         return {"removed": removed}
 
+    async def _async_set_status(call: ServiceCall) -> ServiceResponse:
+        """Correct a parcel's status when the carrier's wording defeated us."""
+        for entry in _resolve_entries(hass, call):
+            uid = await entry.runtime_data.async_set_status(
+                call.data[ATTR_TRACKING], call.data[ATTR_STATUS]
+            )
+            if uid is not None:
+                return {"uid": uid, "status": call.data[ATTR_STATUS]}
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="parcel_not_found",
+            translation_placeholders={"target": call.data[ATTR_TRACKING]},
+        )
+
+    async def _async_clear_delivered(call: ServiceCall) -> ServiceResponse:
+        """Drop finished parcels now rather than waiting out retire_days."""
+        cleared = 0
+        for entry in _resolve_entries(hass, call):
+            cleared += await entry.runtime_data.async_clear_delivered()
+        return {"cleared": cleared}
+
+    async def _async_refresh(call: ServiceCall) -> None:
+        """Read the mailbox now instead of waiting for the next interval."""
+        for entry in _resolve_entries(hass, call):
+            await entry.runtime_data.async_refresh()
+
+    async def _async_get_parcels(call: ServiceCall) -> ServiceResponse:
+        """Return every tracked parcel, for templates and dashboards."""
+        parcels = []
+        for entry in _resolve_entries(hass, call):
+            coordinator = entry.runtime_data
+            parcels.extend(
+                parcel.attributes() | {"uid": uid, "manual": uid in coordinator.manual}
+                for uid, parcel in sorted(
+                    coordinator.data.items(),
+                    key=lambda kv: kv[1].seen_at,
+                    reverse=True,
+                )
+            )
+        return {"parcels": parcels, "count": len(parcels)}
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_RESCAN,
@@ -211,6 +279,30 @@ def _async_register_services(hass: HomeAssistant) -> None:
         _async_remove_parcel,
         schema=REMOVE_PARCEL_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_STATUS,
+        _async_set_status,
+        schema=SET_STATUS_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CLEAR_DELIVERED,
+        _async_clear_delivered,
+        schema=ENTRY_ONLY_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_REFRESH, _async_refresh, schema=ENTRY_ONLY_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_PARCELS,
+        _async_get_parcels,
+        schema=ENTRY_ONLY_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )
 
 

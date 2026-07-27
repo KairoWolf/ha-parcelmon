@@ -93,6 +93,8 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
         self.manual: set[str] = set()
         self.store = ParcelmonStore(hass, entry.entry_id)
         self._watcher: IdleWatcher | None = None
+        #: When the mailbox was last read successfully, for the diagnostic sensor.
+        self.last_checked: datetime | None = None
 
     @callback
     def async_start_push(self) -> None:
@@ -175,6 +177,8 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
 
         if handled:
             await self.hass.async_add_executor_job(mark_seen, self.settings, handled)
+
+        self.last_checked = datetime.now(UTC)
 
         # Save before returning: the messages behind these parcels have just
         # been marked read and cannot be fetched a second time.
@@ -320,6 +324,54 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
         self.async_set_updated_data(dict(self._parcels))
         _LOGGER.debug("Manually added %s", parcel.uid)
         return parcel.uid
+
+    def find(self, tracking: str) -> Parcel | None:
+        """Look a parcel up by uid or tracking number, case-insensitively."""
+        needle = tracking.strip().lower()
+        for uid, parcel in self._parcels.items():
+            if uid.lower() == needle or parcel.tracking.lower() == needle:
+                return parcel
+        return None
+
+    async def async_set_status(self, tracking: str, status: str) -> str | None:
+        """Correct a parcel's status by hand, firing the usual change event.
+
+        Useful when a carrier's wording defeats the classifier, or when a parcel
+        turned up on the doorstep without a delivery email ever arriving.
+        """
+        parcel = self.find(tracking)
+        if parcel is None:
+            return None
+
+        previous = Parcel(**{f: getattr(parcel, f) for f in ("carrier", "tracking")})
+        previous.status = parcel.status
+        if parcel.status == status:
+            return parcel.uid
+
+        parcel.status = status
+        parcel.seen_at = datetime.now(UTC)
+        self._fire_update(parcel, previous)
+        self.store.async_schedule_save(
+            self._parcels, self._seen_message_ids, self.manual
+        )
+        self.async_set_updated_data(dict(self._parcels))
+        _LOGGER.debug("Set %s -> %s by hand", parcel.uid, status)
+        return parcel.uid
+
+    async def async_clear_delivered(self) -> int:
+        """Drop every finished parcel now, ignoring retire_days."""
+        gone = [uid for uid, p in self._parcels.items() if p.status in FINAL_STATES]
+        for uid in gone:
+            del self._parcels[uid]
+            self.manual.discard(uid)
+            self.removed.add(uid)
+        if gone:
+            self.store.async_schedule_save(
+                self._parcels, self._seen_message_ids, self.manual
+            )
+            self.async_set_updated_data(dict(self._parcels))
+        _LOGGER.debug("Cleared %s finished parcels", len(gone))
+        return len(gone)
 
     async def async_remove_parcel(self, tracking: str) -> str | None:
         """Stop tracking a parcel, by uid or by tracking number."""

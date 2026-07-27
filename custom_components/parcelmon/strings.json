@@ -70,6 +70,12 @@
       },
       "parcels_active": {
         "name": "Parcels in transit"
+      },
+      "delivered_today": {
+        "name": "Delivered today"
+      },
+      "last_checked": {
+        "name": "Last checked"
       }
     },
     "image": {
@@ -80,6 +86,14 @@
     "button": {
       "rescan": {
         "name": "Rescan mailbox"
+      },
+      "check_now": {
+        "name": "Check for mail now"
+      }
+    },
+    "binary_sensor": {
+      "mailbox": {
+        "name": "Mailbox"
       }
     }
   },
@@ -143,6 +157,54 @@
         "config_entry_id": {
           "name": "Mailbox",
           "description": "Which configured mailbox to remove it from. Leave empty to search all of them."
+        }
+      }
+    },
+    "set_status": {
+      "name": "Set parcel status",
+      "description": "Correct a parcel's status by hand. Useful when a carrier's wording defeats the classifier, or when a parcel turns up on the doorstep without a delivery email. Fires the same status-change event as a real update, so your automations still run.",
+      "fields": {
+        "tracking_number": {
+          "name": "Tracking number",
+          "description": "The tracking number, or the parcel's uid."
+        },
+        "status": {
+          "name": "Status",
+          "description": "The status to set."
+        },
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to act on. Leave empty for all of them."
+        }
+      }
+    },
+    "clear_delivered": {
+      "name": "Clear delivered parcels",
+      "description": "Remove every delivered and returned parcel now, instead of waiting out the retirement period. Parcels still in transit are untouched.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to act on. Leave empty for all of them."
+        }
+      }
+    },
+    "refresh": {
+      "name": "Check for mail now",
+      "description": "Read the mailbox immediately rather than waiting for the next scheduled check. Only looks at unread mail; use Rescan mailbox to reach mail that has already been read.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to act on. Leave empty for all of them."
+        }
+      }
+    },
+    "get_parcels": {
+      "name": "Get parcels",
+      "description": "Return every tracked parcel with its full detail, for use in templates, scripts and dashboards. Makes no changes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Mailbox",
+          "description": "Which configured mailbox to act on. Leave empty for all of them."
         }
       }
     }

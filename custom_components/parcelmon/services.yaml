@@ -86,3 +86,53 @@ remove_parcel:
       selector:
         config_entry:
           integration: parcelmon
+
+set_status:
+  fields:
+    tracking_number:
+      required: true
+      example: 36YPJ5053229
+      selector:
+        text:
+    status:
+      required: true
+      selector:
+        select:
+          translation_key: parcel_status
+          options:
+            - in_transit
+            - out_for_delivery
+            - delivered
+            - attempted
+            - awaiting_collection
+            - returned
+            - unknown
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon
+
+clear_delivered:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon
+
+refresh:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon
+
+get_parcels:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: parcelmon

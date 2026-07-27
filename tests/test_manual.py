@@ -223,3 +223,71 @@ class TestPushInterval:
             seen_at=datetime.now(UTC) - timedelta(days=10),
         )
         assert old.status in ("delivered",)
+
+
+class TestExtraActions:
+    pytestmark = pytest.mark.asyncio
+
+    async def test_set_status_corrects_a_parcel(self, coordinator):
+        await coordinator.async_add_manual_parcel(
+            tracking="AA1", carrier="auspost", status="in_transit"
+        )
+        coordinator.hass.bus.events.clear()
+        uid = await coordinator.async_set_status("AA1", "delivered")
+        assert uid == "auspost_aa1"
+        assert coordinator._parcels[uid].status == "delivered"
+
+    async def test_set_status_fires_the_change_event(self, coordinator):
+        """A hand correction should drive the same automations a real one does."""
+        await coordinator.async_add_manual_parcel(
+            tracking="AA1", carrier="auspost", status="in_transit"
+        )
+        coordinator.hass.bus.events.clear()
+        await coordinator.async_set_status("AA1", "delivered")
+        _, data = coordinator.hass.bus.events[-1]
+        assert data["previous_status"] == "in_transit"
+        assert data["status"] == "delivered"
+
+    async def test_set_status_to_the_same_value_is_silent(self, coordinator):
+        await coordinator.async_add_manual_parcel(
+            tracking="AA1", carrier="auspost", status="in_transit"
+        )
+        coordinator.hass.bus.events.clear()
+        await coordinator.async_set_status("AA1", "in_transit")
+        assert coordinator.hass.bus.events == []
+
+    async def test_set_status_on_an_unknown_parcel(self, coordinator):
+        assert await coordinator.async_set_status("nope", "delivered") is None
+
+    async def test_clear_delivered_removes_only_finished_parcels(self, coordinator):
+        await coordinator.async_add_manual_parcel(
+            tracking="AA1", carrier="auspost", status="delivered"
+        )
+        await coordinator.async_add_manual_parcel(
+            tracking="BB2", carrier="auspost", status="returned"
+        )
+        await coordinator.async_add_manual_parcel(
+            tracking="CC3", carrier="auspost", status="in_transit"
+        )
+        assert await coordinator.async_clear_delivered() == 2
+        assert list(coordinator._parcels) == ["auspost_cc3"]
+
+    async def test_clear_delivered_ignores_retire_days(self, coordinator):
+        """The point is to clear now, not to wait out the retirement window."""
+        coordinator.retire_days = 90
+        await coordinator.async_add_manual_parcel(
+            tracking="AA1", carrier="auspost", status="delivered"
+        )
+        assert await coordinator.async_clear_delivered() == 1
+        assert coordinator._parcels == {}
+
+    async def test_clear_delivered_on_an_empty_set(self, coordinator):
+        assert await coordinator.async_clear_delivered() == 0
+
+    async def test_find_matches_uid_or_tracking(self, coordinator):
+        await coordinator.async_add_manual_parcel(
+            tracking="AA1", carrier="auspost", status="unknown"
+        )
+        assert coordinator.find("aa1") is not None
+        assert coordinator.find("auspost_aa1") is not None
+        assert coordinator.find("zz9") is None

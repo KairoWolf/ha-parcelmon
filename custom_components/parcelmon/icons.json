@@ -6,6 +6,12 @@
       },
       "parcels_active": {
         "default": "mdi:package-variant-closed"
+      },
+      "delivered_today": {
+        "default": "mdi:package-variant-closed-check"
+      },
+      "last_checked": {
+        "default": "mdi:email-check-outline"
       }
     },
     "image": {
@@ -16,12 +22,27 @@
     "button": {
       "rescan": {
         "default": "mdi:email-sync-outline"
+      },
+      "check_now": {
+        "default": "mdi:email-arrow-left-outline"
+      }
+    },
+    "binary_sensor": {
+      "mailbox": {
+        "default": "mdi:email-check-outline",
+        "state": {
+          "off": "mdi:email-alert-outline"
+        }
       }
     }
   },
   "services": {
     "rescan": "mdi:email-sync-outline",
     "add_parcel": "mdi:package-variant-plus",
-    "remove_parcel": "mdi:package-variant-minus"
+    "remove_parcel": "mdi:package-variant-minus",
+    "set_status": "mdi:package-variant-closed-check",
+    "clear_delivered": "mdi:broom",
+    "refresh": "mdi:email-arrow-left-outline",
+    "get_parcels": "mdi:format-list-bulleted"
   }
 }

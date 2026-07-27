@@ -28,22 +28,25 @@ async def async_setup_entry(
     entry: ParcelmonConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add the rescan button to the Parcelmon service device."""
-    async_add_entities([ParcelmonRescanButton(entry.runtime_data, entry)])
+    """Add the mailbox buttons to the Parcelmon service device."""
+    async_add_entities(
+        [
+            ParcelmonCheckNowButton(entry.runtime_data, entry),
+            ParcelmonRescanButton(entry.runtime_data, entry),
+        ]
+    )
 
 
-class ParcelmonRescanButton(CoordinatorEntity[ParcelmonCoordinator], ButtonEntity):
-    """Rescan the folder for parcels in mail that was already read."""
+class _ParcelmonButton(CoordinatorEntity[ParcelmonCoordinator], ButtonEntity):
+    """Shared wiring: every button belongs to the one service device."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "rescan"
-    _attr_icon = "mdi:email-sync-outline"
 
     def __init__(
-        self, coordinator: ParcelmonCoordinator, entry: ParcelmonConfigEntry
+        self, coordinator: ParcelmonCoordinator, entry: ParcelmonConfigEntry, key: str
     ) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_rescan"
+        self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name="Parcelmon",
@@ -51,6 +54,29 @@ class ParcelmonRescanButton(CoordinatorEntity[ParcelmonCoordinator], ButtonEntit
             model="Mailbox watcher",
             entry_type="service",
         )
+
+
+class ParcelmonCheckNowButton(_ParcelmonButton):
+    """Read the mailbox now instead of waiting for the next interval."""
+
+    _attr_translation_key = "check_now"
+    _attr_icon = "mdi:email-arrow-left-outline"
+
+    def __init__(self, coordinator, entry) -> None:
+        super().__init__(coordinator, entry, "check_now")
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_request_refresh()
+
+
+class ParcelmonRescanButton(_ParcelmonButton):
+    """Rescan the folder for parcels in mail that was already read."""
+
+    _attr_translation_key = "rescan"
+    _attr_icon = "mdi:email-sync-outline"
+
+    def __init__(self, coordinator, entry) -> None:
+        super().__init__(coordinator, entry, "rescan")
 
     async def async_press(self) -> None:
         """Rescan using the defaults. Use the action for a wider window."""

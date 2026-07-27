@@ -34,6 +34,10 @@ IDLE_RECONNECT_SECONDS: Final = 30
 SERVICE_RESCAN: Final = "rescan"
 SERVICE_ADD_PARCEL: Final = "add_parcel"
 SERVICE_REMOVE_PARCEL: Final = "remove_parcel"
+SERVICE_SET_STATUS: Final = "set_status"
+SERVICE_CLEAR_DELIVERED: Final = "clear_delivered"
+SERVICE_REFRESH: Final = "refresh"
+SERVICE_GET_PARCELS: Final = "get_parcels"
 
 ATTR_CONFIG_ENTRY_ID: Final = "config_entry_id"
 ATTR_DAYS: Final = "days"
