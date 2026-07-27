@@ -41,7 +41,7 @@ from .imap_client import (
     mark_seen,
 )
 from .models import Parcel
-from .parsers import parse_message
+from .parsers import parse_message_all
 from .store import ParcelmonStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -149,8 +149,8 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
         handled: list[bytes] = []
 
         for imap_id, message in messages:
-            parcel = parse_message(message)
-            if parcel is None:
+            parcels = parse_message_all(message)
+            if not parcels:
                 # Leave unread: either the filter over-matched, or a carrier
                 # changed their template and it is worth a human look.
                 _LOGGER.warning(
@@ -160,17 +160,25 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
                 )
                 continue
 
-            if parcel.message_id and parcel.message_id in self._seen_message_ids:
+            if any(
+                p.message_id and p.message_id in self._seen_message_ids
+                for p in parcels
+            ):
                 handled.append(imap_id)
                 continue
 
-            previous = self._parcels.get(parcel.uid)
-            self._merge(parcel)
-            self._fire_update(self._parcels[parcel.uid], previous)
-            if parcel.message_id:
-                self._seen_message_ids.append(parcel.message_id)
+            for parcel in parcels:
+                previous = self._parcels.get(parcel.uid)
+                self._merge(parcel)
+                self._fire_update(self._parcels[parcel.uid], previous)
+                if parcel.message_id:
+                    self._seen_message_ids.append(parcel.message_id)
+                _LOGGER.debug("Parsed %s -> %s", parcel.uid, parcel.status)
+            if len(parcels) > 1:
+                _LOGGER.debug(
+                    "%s carried %s consignments", imap_id.decode(), len(parcels)
+                )
             handled.append(imap_id)
-            _LOGGER.debug("Parsed %s -> %s", parcel.uid, parcel.status)
 
         self._seen_message_ids = self._seen_message_ids[-MAX_REMEMBERED_MESSAGES:]
         self._retire_stale()
@@ -218,37 +226,42 @@ class ParcelmonCoordinator(DataUpdateCoordinator[dict[str, Parcel]]):
         matched = 0
 
         for _imap_id, message in messages:
-            parcel = parse_message(message)
-            if parcel is None:
+            parsed = parse_message_all(message)
+            if not parsed:
                 # Quietly skipped: a rescan sweeps the whole folder, so unmatched
                 # mail here is normal and must not spam the log the way a live
                 # poll's unmatched message does.
                 continue
 
             matched += 1
-            if parcel.message_id and parcel.message_id in self._seen_message_ids:
-                continue
-
-            # Date the parcel by its email, not by now, so retire_days measures
-            # from when the parcel actually finished rather than from the rescan.
-            if parcel.email_date is not None:
-                parcel.seen_at = parcel.email_date
-
-            existing = self._parcels.get(parcel.uid)
-            if (
-                existing is not None
-                and existing.seen_at > parcel.seen_at
-                and parcel.uid not in self.manual
+            if any(
+                p.message_id and p.message_id in self._seen_message_ids
+                for p in parsed
             ):
-                # Live polling already knows something newer about this parcel.
-                # A hand-added placeholder is the exception: real mail always
-                # supersedes it, however recently it was typed in.
                 continue
-            self.manual.discard(parcel.uid)
 
-            self._merge(parcel)
-            if parcel.message_id:
-                self._seen_message_ids.append(parcel.message_id)
+            for parcel in parsed:
+                # Date the parcel by its email, not by now, so retire_days
+                # measures from when the parcel actually finished rather than
+                # from the rescan.
+                if parcel.email_date is not None:
+                    parcel.seen_at = parcel.email_date
+
+                existing = self._parcels.get(parcel.uid)
+                if (
+                    existing is not None
+                    and existing.seen_at > parcel.seen_at
+                    and parcel.uid not in self.manual
+                ):
+                    # Live polling already knows something newer about this
+                    # parcel. A hand-added placeholder is the exception: real
+                    # mail always supersedes it, however recently it was typed in.
+                    continue
+                self.manual.discard(parcel.uid)
+
+                self._merge(parcel)
+                if parcel.message_id:
+                    self._seen_message_ids.append(parcel.message_id)
 
         self._seen_message_ids = self._seen_message_ids[-MAX_REMEMBERED_MESSAGES:]
         self._retire_stale()

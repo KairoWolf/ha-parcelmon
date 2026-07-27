@@ -97,3 +97,13 @@ class CarrierParser:
 
     def parse(self, msg: Message) -> Parcel | None:  # pragma: no cover - interface
         raise NotImplementedError
+
+    def parse_all(self, msg: Message) -> list[Parcel]:
+        """Every parcel in one email.
+
+        Carriers usually send one email per consignment, so the default is
+        simply parse(). Override where a single notification can cover several
+        parcels, which would otherwise silently yield only the first.
+        """
+        parcel = self.parse(msg)
+        return [parcel] if parcel is not None else []

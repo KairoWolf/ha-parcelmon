@@ -28,6 +28,14 @@ def parse_message(msg: Message) -> Parcel | None:
     return None
 
 
+def parse_message_all(msg: Message) -> list[Parcel]:
+    """Every parcel in the email, for carriers that cover several in one send."""
+    for parser in PARSERS:
+        if parser.matches(msg):
+            return parser.parse_all(msg)
+    return []
+
+
 __all__ = [
     "KNOWN_DOMAINS",
     "PARSERS",
@@ -35,4 +43,5 @@ __all__ = [
     "CarrierParser",
     "TeamGlobalExpressParser",
     "parse_message",
+    "parse_message_all",
 ]
